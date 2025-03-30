@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Battleship Game</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            margin: 20px auto;
+            float: left;
+        }
+        td {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid black;
+            background-color: lightblue;
+            cursor: pointer;
+        }
+        .hit {
+            background-color: red;
+        }
+        .partial-hit {
+            background-color: orange;
+        }
+        .miss {
+            background-color: white;
+        }
+        .side-panel {
+            float: left;
+            margin-left: 20px;
+        }
+        #finishedMessage {
+            text-align: center;
+            color: red;
+            font-size: 24px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Battleship Game</h1>
+    <div id="finishedMessage">FINISHED</div>
+    <table id="battleshipBoard">
+        <!-- JavaScript will populate the table here -->
+    </table>
+    <div class="side-panel">
+        <h2>Miss Count:</h2>
+        <p id="missCount">0</p>
+    </div>
+    <script>
+        const board = document.getElementById('battleshipBoard');
+        const missCountDisplay = document.getElementById('missCount');
+        const finishedMessage = document.getElementById('finishedMessage');
+        const ships = [];
+        const multiCellShips = [];
+        let missCount = 0;
+
+        // Generate 10x10 grid
+        for (let i = 0; i < 10; i++) {
+            const row = document.createElement('tr');
+            for (let j = 0; j < 10; j++) {
+                const cell = document.createElement('td');
+                cell.addEventListener('click', () => {
+                    if (cell.classList.contains('ship')) {
+                        if (cell.classList.contains('multi-cell')) {
+                            cell.classList.toggle('partial-hit'); // Turn orange for first hit
+                            const shipCells = multiCellShips.find(ship => ship.includes(cell));
+                            if (shipCells.every(c => c.classList.contains('partial-hit'))) {
+                                shipCells.forEach(c => {
+                                    c.classList.remove('partial-hit');
+                                    c.classList.add('hit'); // Turn red when all parts are hit
+                                });
+                            }
+                        } else {
+                            cell.classList.add('hit'); // Mark hit as red
+                        }
+                        checkGameStatus(); // Check if all ships are hit
+                    } else if (!cell.classList.contains('miss')) {
+                        cell.classList.add('miss'); // Mark miss
+                        cell.style.backgroundColor = 'white';
+                        missCount++;
+                        missCountDisplay.textContent = missCount; // Update miss count
+                    }
+                });
+                row.appendChild(cell);
+            }
+            board.appendChild(row);
+        }
+
+        // Check if all ships have been hit
+        function checkGameStatus() {
+            const allShips = [...board.getElementsByClassName('ship')];
+            if (allShips.every(cell => cell.classList.contains('hit'))) {
+                revealAllCells();
+                finishedMessage.style.display = 'block'; // Show "FINISHED" message
+            }
+        }
+
+        // Reveal all undiscovered cells
+        function revealAllCells() {
+            for (let i = 0; i < board.rows.length; i++) {
+                for (let j = 0; j < board.rows[i].cells.length; j++) {
+                    const cell = board.rows[i].cells[j];
+                    if (!cell.classList.contains('ship') && !cell.classList.contains('miss')) {
+                        cell.style.backgroundColor = 'gray'; // Indicate undiscovered cells
+                    }
+                }
+            }
+        }
+
+        // Helper function to check if a position is valid for ship placement
+        function isValidPosition(x, y, length, direction) {
+            for (let i = 0; i < length; i++) {
+                const nx = x + direction[0] * i;
+                const ny = y + direction[1] * i;
+                if (nx < 0 || nx >= 10 || ny < 0 || ny >= 10) return false; // Out of bounds
+                if (board.rows[nx].cells[ny].classList.contains('ship')) return false; // Overlaps
+                const neighbors = [
+                    [nx - 1, ny], [nx + 1, ny], [nx, ny - 1], [nx, ny + 1],
+                    [nx - 1, ny - 1], [nx - 1, ny + 1], [nx + 1, ny - 1], [nx + 1, ny + 1]
+                ];
+                for (const [adjX, adjY] of neighbors) {
+                    if (adjX >= 0 && adjX < 10 && adjY >= 0 && adjY < 10) {
+                        if (board.rows[adjX].cells[adjY].classList.contains('ship')) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Place a multi-cell ship
+        function placeMultiCellShip(length) {
+            while (true) {
+                const x = Math.floor(Math.random() * 10);
+                const y = Math.floor(Math.random() * 10);
+                const direction = Math.random() < 0.5 ? [0, 1] : [1, 0];
+                if (isValidPosition(x, y, length, direction)) {
+                    const shipCells = [];
+                    for (let i = 0; i < length; i++) {
+                        const nx = x + direction[0] * i;
+                        const ny = y + direction[1] * i;
+                        const cell = board.rows[nx].cells[ny];
+                        cell.classList.add('ship', 'multi-cell');
+                        shipCells.push(cell);
+                    }
+                    multiCellShips.push(shipCells);
+                    break;
+                }
+            }
+        }
+
+        // Place ships in order
+        placeMultiCellShip(4); // One 4-cell ship
+        placeMultiCellShip(3); // First 3-cell ship
+        placeMultiCellShip(3); // Second 3-cell ship
+        placeMultiCellShip(2); // First 2-cell ship
+        placeMultiCellShip(2); // Second 2-cell ship
+        placeMultiCellShip(2); // Third 2-cell ship
+
+        // Place single-space ships
+        while (ships.length < 4) {
+            const x = Math.floor(Math.random() * 10);
+            const y = Math.floor(Math.random() * 10);
+            const cell = board.rows[x].cells[y];
+            if (!cell.classList.contains('ship') && isValidPosition(x, y, 1, [0, 0])) {
+                cell.classList.add('ship');
+                ships.push(cell);
+            }
+        }
+    </script>
+</body>
+</html>
